@@ -49,7 +49,7 @@ import (
 	"k8s.io/kubectl/pkg/util/interrupt"
 	"k8s.io/kubectl/pkg/util/slice"
 	"k8s.io/kubectl/pkg/util/templates"
-	utilpointer "k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 // GetOptions contains the input to the get command.
@@ -267,9 +267,13 @@ func (o *GetOptions) Complete(f cmdutil.Factory, cmd *cobra.Command, args []stri
 	}
 
 	switch {
-	case o.Watch || o.WatchOnly:
+	case o.Watch:
 		if len(o.SortBy) > 0 {
-			fmt.Fprintf(o.IOStreams.ErrOut, "warning: --watch or --watch-only requested, --sort-by will be ignored\n")
+			fmt.Fprintf(o.IOStreams.ErrOut, "warning: --watch requested, --sort-by will be ignored for watch events received\n")
+		}
+	case o.WatchOnly:
+		if len(o.SortBy) > 0 {
+			fmt.Fprintf(o.IOStreams.ErrOut, "warning: --watch-only requested, --sort-by will be ignored\n")
 		}
 	default:
 		if len(args) == 0 && cmdutil.IsFilenameSliceEmpty(o.Filenames, o.Kustomize) {
@@ -627,7 +631,7 @@ func (o *GetOptions) watch(f cmdutil.Factory, args []string) error {
 
 	info := infos[0]
 	mapping := info.ResourceMapping()
-	outputObjects := utilpointer.BoolPtr(!o.WatchOnly)
+	outputObjects := ptr.To(!o.WatchOnly)
 	printer, err := o.ToPrinter(mapping, outputObjects, o.AllNamespaces, false)
 	if err != nil {
 		return err

@@ -3083,19 +3083,27 @@ type PodAffinityTerm struct {
 	NamespaceSelector *metav1.LabelSelector
 	// MatchLabelKeys is a set of pod label keys to select which pods will
 	// be taken into consideration. The keys are used to lookup values from the
-	// incoming pod labels, those key-value labels are merged with `LabelSelector` as `key in (value)`
+	// incoming pod labels, those key-value labels are merged with `labelSelector` as `key in (value)`
 	// to select the group of existing pods which pods will be taken into consideration
 	// for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
 	// pod labels will be ignored. The default value is empty.
+	// The same key is forbidden to exist in both matchLabelKeys and labelSelector.
+	// Also, matchLabelKeys cannot be set when labelSelector isn't set.
+	// This is a beta field and requires enabling MatchLabelKeysInPodAffinity feature gate (enabled by default).
+	//
 	// +listType=atomic
 	// +optional
 	MatchLabelKeys []string
 	// MismatchLabelKeys is a set of pod label keys to select which pods will
 	// be taken into consideration. The keys are used to lookup values from the
-	// incoming pod labels, those key-value labels are merged with `LabelSelector` as `key notin (value)`
+	// incoming pod labels, those key-value labels are merged with `labelSelector` as `key notin (value)`
 	// to select the group of existing pods which pods will be taken into consideration
 	// for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
 	// pod labels will be ignored. The default value is empty.
+	// The same key is forbidden to exist in both mismatchLabelKeys and labelSelector.
+	// Also, mismatchLabelKeys cannot be set when labelSelector isn't set.
+	// This is a beta field and requires enabling MatchLabelKeysInPodAffinity feature gate (enabled by default).
+	//
 	// +listType=atomic
 	// +optional
 	MismatchLabelKeys []string
@@ -3277,9 +3285,11 @@ type PodSpec struct {
 	// +optional
 	AutomountServiceAccountToken *bool
 
-	// NodeName is a request to schedule this pod onto a specific node.  If it is non-empty,
-	// the scheduler simply schedules this pod onto that node, assuming that it fits resource
-	// requirements.
+	// NodeName indicates in which node this pod is scheduled.
+	// If empty, this pod is a candidate for scheduling by the scheduler defined in schedulerName.
+	// Once this field is set, the kubelet for this node becomes responsible for the lifecycle of this pod.
+	// This field should not be used to express a desire for the pod to be scheduled on a specific node.
+	// https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#nodename
 	// +optional
 	NodeName string
 	// SecurityContext holds pod-level security attributes and common container settings.
@@ -3477,7 +3487,7 @@ type PodResourceClaimStatus struct {
 	Name string
 
 	// ResourceClaimName is the name of the ResourceClaim that was
-	// generated for the Pod in the namespace of the Pod. It this is
+	// generated for the Pod in the namespace of the Pod. If this is
 	// unset, then generating a ResourceClaim was not necessary. The
 	// pod.spec.resourceClaims entry can be ignored in this case.
 	ResourceClaimName *string
